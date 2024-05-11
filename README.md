@@ -1,5 +1,5 @@
 # break_eternity.gd
-A port of Patashu's [https://github.com/Patashu/break_eternity.js/](break_eternity.js), for Godot projects!
+A port of Patashu's [break_eternity.js](https://github.com/Patashu/break_eternity.js/), for Godot projects!
 
 This library currently contains most functions from break_eternity.js (excluding alias functions and easter eggs, and fromString() because of its complexity) 
 Some stuff may be slightly broken or incomplete, I tried my best to port everything I could correctly.
