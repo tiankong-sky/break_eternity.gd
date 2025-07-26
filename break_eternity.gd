@@ -1163,8 +1163,8 @@ func slog_internal(base : Decimal = from_number(10), linear : bool = false):
 			else:
 				return from_number(result + slog_critical(base.to_number(), copy.to_number()))
 		else:
-			result += 1;
-			copy = Decimal.log(copy, base);
+			result += 1
+			copy = copy._log(base)
 	return from_number(result)
 
 #Lambert's W Function 
@@ -1473,7 +1473,7 @@ func pentate(height = 2, payload = from_components_no_normalize(1, 0, 1), linear
 	if not fracheight == 0:
 		if payload.eq(from_number(1)):
 			++height
-			payload = Decimal.fromNumber(fracheight);
+			payload = Decimal.from_number(fracheight);
 		else:
 			if eq(from_number(10)):
 				payload = payload.layer_add_10(fracheight, linear)
