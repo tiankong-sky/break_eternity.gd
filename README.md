@@ -7,4 +7,4 @@ Some stuff may be slightly broken or incomplete, I tried my best to port everyth
 If you're a more experienced Godot programmer than I am and notice something that could be improved upon or fixed, don't hesitate to open a PR!
 
 Thanks :)
-- MM
+- Mocha
