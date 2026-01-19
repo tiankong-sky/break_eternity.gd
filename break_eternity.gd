@@ -12,7 +12,7 @@
 
 class_name Decimal
 
-var sign: int = 0
+var ssign: int = 0
 var layer: int = 0
 var mag: float = 0.00
 
@@ -85,7 +85,7 @@ var critical_slog_values = [[
 	-1, -0.8641642839543857, -0.732534623168535, -0.6083127477059322, -0.4934049257184696, -0.3885773075899922, -0.29376029055315767, -0.2083678561173622, -0.13155653399373268, -0.062401588652553186, 0]]
 
 func _init(_sign: int, _layer: int, _mag: float):
-	sign = _sign
+	ssign = _sign
 	layer = _layer
 	mag = _mag
 
@@ -135,10 +135,10 @@ func f_gamma(n):
 	return exp(l) / scal1
 
 func decimal_places(value, places):
-	var len = places + 1
+	var length = places + 1
 	var numDigits = ceil(num_log10(abs(value)))
-	var rounded = round(value * pow(10, len - numDigits)) * pow(10, numDigits - len)
-	return snapped(rounded, max(len - numDigits, 0))
+	var rounded = round(value * pow(10, length - numDigits)) * pow(10, numDigits - length)
+	return snapped(rounded, max(length - numDigits, 0))
 
 func f_lambertw(z, tol: float = 1e-10):
 	var w
@@ -192,7 +192,7 @@ func d_lambertw(z: Decimal, tol: float = 1e-10):
 ### CONSTRUCTORS ###
 
 static func from_decimal(value: Decimal):
-	return Decimal.new(value.sign, value.layer, value.mag).normalize()
+	return Decimal.new(value.ssign, value.layer, value.mag).normalize()
 
 static func from_components(_sign: int, _layer: int, _mag: float):
 	return Decimal.new(_sign, _layer, _mag).normalize()
@@ -200,7 +200,7 @@ static func from_components(_sign: int, _layer: int, _mag: float):
 static func from_number(input):
 	return Decimal.new(sign(input), 0, abs(input)).normalize()
 
-static func from_string(input: String):
+static func from_string(_input: String):
 	#TODO
 	pass
 
@@ -215,23 +215,23 @@ static func from_number_no_normalize(input):
 #Normalize (Internal)
 func normalize():
 	#Any 0 is totally 0
-	if (sign == 0) or (mag == 0 and layer == 0) or (mag == -INF and layer > 0 and is_finite(layer)):
-		sign = 0
+	if (ssign == 0) or (mag == 0 and layer == 0) or (mag == -INF and layer > 0 and is_finite(layer)):
+		ssign = 0
 		mag = 0
 		layer = 0
 		return self
-	#extract sign from negative mag at layer 0
+	#extract ssign from negative mag at layer 0
 	if (layer == 0 and mag < 0):
 		mag = - mag
-		sign = - sign
+		ssign = - ssign
 	#Handle infinities
 	if (mag == INF or layer == INF or mag == -INF or layer == -INF):
-		if (sign == 1):
+		if (ssign == 1):
 			mag = INF;
-			layer = INF;
-		elif (sign == -1):
+			layer = int(INF);
+		elif (ssign == -1):
 			mag = - INF;
-			layer = - INF;
+			layer = - int(INF);
 		return self
 	#Handle shifting from layer 0 to negative layers.
 	if (layer == 0 and mag < FIRST_NEG_LAYER):
@@ -255,15 +255,15 @@ func normalize():
 				signmag = sign(mag);
 		if (layer == 0):
 			if (mag < 0):
-				#extract sign from negative mag at layer 0
+				#extract ssign from negative mag at layer 0
 				mag = - mag
-				sign = - sign
+				ssign = - ssign
 			elif (mag == 0):
 				#excessive rounding can give us all zeroes
-				sign = 0
-	if (is_nan(sign) or is_nan(layer) or is_nan(mag)):
-		sign = NAN
-		layer = NAN
+				ssign = 0
+	if (is_nan(ssign) or is_nan(layer) or is_nan(mag)):
+		ssign = int(NAN)
+		layer = int(NAN)
 		mag = NAN
 
 	return self
@@ -271,20 +271,20 @@ func normalize():
 ### DECONSTRUCTORS ###
 
 func to_number():
-	if (mag == INF and layer == INF and sign == 1):
+	if (mag == INF and layer == INF and ssign == 1):
 		return INF
-	if (mag == -INF and layer == -INF and sign == -1):
+	if (mag == -INF and layer == -INF and ssign == -1):
 		return -INF
 	if (!is_finite(layer)):
 		return NAN
 	if (layer == 0):
-		return sign * mag;
+		return ssign * mag;
 	elif (layer == 1):
-		return sign * pow(10, mag);
+		return ssign * pow(10, mag);
 	#overflow for any normalized Decimal
 	else:
 		if (mag > 0):
-			if (sign > 0):
+			if (ssign > 0):
 				return INF
 			else:
 				return 0
@@ -292,29 +292,29 @@ func to_number():
 			return -INF
 
 func _to_string():
-	if is_nan(layer) or is_nan(sign) or is_nan(mag):
+	if is_nan(layer) or is_nan(ssign) or is_nan(mag):
 		return "NaN"
 	if mag == INF or layer == INF or mag == -INF or layer == -INF:
-		if sign == 1:
+		if ssign == 1:
 			return "Infinity"
 		else:
 			return "-Infinity"
-		if layer == 0:
-			if (mag < 1e21 and mag > 1e-7) or (mag == 0):
-				return str(sign * mag)
-			else:
-				return str("%1.2f" % get_m()) + "e" + str(get_e())
+	if layer == 0:
+		if (mag < 1e21 and mag > 1e-7) or (mag == 0):
+			return str(ssign * mag)
+		else:
+			return str("%1.2f" % get_m()) + "e" + str(get_e())
 	elif (layer == 1):
 		return str("%1.2f" % get_m()) + "e" + str(get_e())
 	else:
 		#layer 2+
 		if (layer <= MAX_ES_IN_A_ROW):
-			if sign == -1:
+			if ssign == -1:
 				return "-e".repeat(layer) + str(mag)
 			else:
 				return "e".repeat(layer) + str(mag)
 		else:
-			if sign == -1:
+			if ssign == -1:
 				return "-(e^" + str(layer) + ")" + str(mag)
 			else:
 				return "(e^" + str(layer) + ")" + str(mag)
@@ -322,14 +322,14 @@ func _to_string():
 func to_exponential(places: int):
 	if layer == 0:
 		#Not sure what to do here, just have it return to_number() for now ~MM
-		#return (sign * mag).to_exponential(places)
+		#return (ssign * mag).to_exponential(places)
 		return to_number()
 	return to_string_with_decimal_places(places)
 
 func to_fixed(places: int):
 	if layer == 0:
 		#Not sure what to do here either, just have it return snappedi(to_number(), 1) for now ~MM
-		#return (sign * mag).to_fixed(places)
+		#return (ssign * mag).to_fixed(places)
 		return snappedi(to_number(), 1)
 	return to_string_with_decimal_places(places)
 
@@ -344,20 +344,20 @@ func to_string_with_decimal_places(places: int):
 	if layer == 0:
 		if (mag < 1e21 and mag > 1e-7) or mag == 0:
 			#Still don't know how to convert this here, so just return to_fixed
-			#return (sign * mag).to_fixed(places)
-			return to_fixed(places)
+			#return (ssign * mag).to_fixed(places)
+			return str(to_fixed(places))
 		return str(decimal_places(get_m(), places)) + "e" + str(decimal_places(get_e(), places))
 	elif layer == 1:
 		return str(decimal_places(get_m(), places)) + "e" + str(decimal_places(get_e(), places))
 	else:
 		#layer 2+
 		if layer <= MAX_ES_IN_A_ROW:
-			if sign == -1:
+			if ssign == -1:
 				return "-e".repeat(layer) + str(decimal_places(mag, places))
 			else:
 				return "e".repeat(layer) + str(decimal_places(mag, places))
 		else:
-			if sign == -1:
+			if ssign == -1:
 				return "-(e^" + str(layer) + ")" + str(decimal_places(mag, places))
 			else:
 				return "(e^" + str(layer) + ")" + str(decimal_places(mag, places))
@@ -385,31 +385,31 @@ func magnitude_with_decimal_places(places: int):
 func power_of_10(power):
 	var powersOf10 = [];
 	for i in range(NUMBER_EXP_MIN + 1, NUMBER_EXP_MAX):
-		powersOf10.push(float("1e" + str(i)))
+		powersOf10.append(float("1e" + str(i)))
 	var indexOf0InPowersOf10 = 323
 	return powersOf10[power + indexOf0InPowersOf10]
 
 func get_m():
-	if (sign == 0):
+	if (ssign == 0):
 		return 0
 	elif (layer == 0):
-		var exp = floor(num_log10(mag))
+		var expnum = floor(num_log10(mag))
 		#handle special case 5e-324
 		var man
 		if (mag == 5e-324):
 			man = 5
 		else:
-			man = mag / power_of_10(exp)
-			return sign * man
+			man = mag / power_of_10(expnum)
+			return ssign * man
 	elif (layer == 1):
 		var residue = mag - floor(mag)
-		return sign * pow(10, residue)
+		return ssign * pow(10, residue)
 	else:
 		#mantissa stops being relevant past 1e9e15 / ee15.954
-		return sign
+		return ssign
 
 func get_e():
-	if (sign == 0):
+	if (ssign == 0):
 		return 0
 	elif (layer == 0):
 		return floor(num_log10(mag))
@@ -430,13 +430,13 @@ func add(value: Decimal):
 		return value
 
 	#Special case - if one of the numbers is 0, return the other number.
-	if (sign == 0):
+	if (ssign == 0):
 		return value
-	if (value.sign == 0):
+	if (value.ssign == 0):
 		return self
 
 	#Special case - Adding a number to its negation produces 0, no matter how large.
-	if (sign == -value.sign) and (layer == value.layer) and (mag == value.mag):
+	if (ssign == -value.ssign) and (layer == value.layer) and (mag == value.mag):
 		return from_components_no_normalize(0, 0, 0)
 
 	var a
@@ -453,7 +453,7 @@ func add(value: Decimal):
 		b = self
 
 	if (a.layer == 0 && b.layer == 0):
-		return from_number(a.sign * a.mag + b.sign * b.mag)
+		return from_number(a.ssign * a.mag + b.ssign * b.mag)
 
 	var layera = a.layer * sign(a.mag);
 	var layerb = b.layer * sign(b.mag);
@@ -466,7 +466,7 @@ func add(value: Decimal):
 			return a
 		else:
 			var magdiff = pow(10, num_log10(a.mag) - b.mag)
-			var mantissa = b.sign + a.sign * magdiff
+			var mantissa = b.ssign + a.ssign * magdiff
 			return from_components(sign(mantissa), 1, b.mag + num_log10(abs(mantissa)))
 
 	if (layera == 1 and layerb == 0):
@@ -474,14 +474,14 @@ func add(value: Decimal):
 			return a
 		else:
 			var _magdiff = pow(10, a.mag - num_log10(b.mag))
-			var _mantissa = b.sign + a.sign * _magdiff
+			var _mantissa = b.ssign + a.ssign * _magdiff
 			return from_components(sign(_mantissa), 1, num_log10(b.mag) + num_log10(abs(_mantissa)))
 
 	if (abs(a.mag - b.mag) > MAX_SIGNIFICANT_DIGITS):
 		return a
 	else:
 		var _magdiff2 = pow(10, a.mag - b.mag)
-		var _mantissa2 = b.sign + a.sign * _magdiff2
+		var _mantissa2 = b.ssign + a.ssign * _magdiff2
 		return from_components(sign(_mantissa2), 1, b.mag + num_log10(abs(_mantissa2)))
 
 #Subtract
@@ -497,12 +497,12 @@ func multiply(value: Decimal):
 		return value
 
 	#Special case - if one of the numbers is 0, return 0.
-	if sign == 0 or value.sign == 0:
+	if ssign == 0 or value.ssign == 0:
 		return from_components_no_normalize(0, 0, 0)
 
 	#Special case - Multiplying a number by its own reciprocal yields +/- 1, no matter how large.
 	if (layer == value.layer) and (mag == -value.mag):
-		return from_components_no_normalize(sign * value.sign, 0, 1)
+		return from_components_no_normalize(ssign * value.ssign, 0, 1)
 
 	var a
 	var b
@@ -516,21 +516,21 @@ func multiply(value: Decimal):
 		b = self
 
 	if a.layer == 0 and b.layer == 0:
-		return from_number(a.sign * b.sign * a.mag * b.mag)
+		return from_number(a.ssign * b.ssign * a.mag * b.mag)
 
 	#Special case: If one of the numbers is layer 3 or higher or one of the numbers is 2+ layers bigger than the other, just take the bigger number.
 	if a.layer >= 3 or (a.layer - b.layer >= 2):
-		return from_components(a.sign * b.sign, a.layer, a.mag)
+		return from_components(a.ssign * b.ssign, a.layer, a.mag)
 	if a.layer == 1 and b.layer == 0:
-		return from_components(a.sign * b.sign, 1, a.mag + num_log10(b.mag))
+		return from_components(a.ssign * b.ssign, 1, a.mag + num_log10(b.mag))
 	if a.layer == 1 and b.layer == 1:
-		return from_components(a.sign * b.sign, 1, a.mag + b.mag)
+		return from_components(a.ssign * b.ssign, 1, a.mag + b.mag)
 	if a.layer == 2 and b.layer == 1:
 		var newmag = from_components(sign(a.mag), a.layer - 1, abs(a.mag)).add(from_components(sign(b.mag), b.layer - 1, abs(b.mag)));
-		return from_components(a.sign * b.sign, newmag.layer + 1, newmag.sign * newmag.mag)
+		return from_components(a.ssign * b.ssign, newmag.layer + 1, newmag.ssign * newmag.mag)
 	if a.layer == 2 and b.layer == 2:
 		var _newmag = from_components(sign(a.mag), a.layer - 1, abs(a.mag)).add(from_components(sign(b.mag), b.layer - 1, abs(b.mag)));
-		return from_components(a.sign * b.sign, _newmag.layer + 1, _newmag.sign * _newmag.mag)
+		return from_components(a.ssign * b.ssign, _newmag.layer + 1, _newmag.ssign * _newmag.mag)
 	else:
 		print("Bad arguments to multiply: " + str(self) + ", " + str(value))
 		return self
@@ -555,7 +555,7 @@ func mod(value: Decimal):
 	if (value.subtract(self).eq(value)):
 		#this is too small to register to decimal
 		return self
-	if sign == -1:
+	if ssign == -1:
 		return _abs().mod(value).neg()
 
 	return subtract(divide(value).floor().multiply(value))
@@ -567,17 +567,17 @@ func recip():
 	if mag == 0:
 		return from_components(0, 0, NAN)
 	elif layer == 0:
-		return from_components(sign, 0, 1 / mag)
+		return from_components(ssign, 0, 1 / mag)
 	else:
-		return from_components(sign, layer, -mag);
+		return from_components(ssign, layer, -mag);
 
 #Negate
 func neg():
-	return from_components_no_normalize(-sign, layer, mag)
+	return from_components_no_normalize(-ssign, layer, mag)
 
 #Abs
 func _abs():
-	return from_components_no_normalize(abs(sign), layer, mag)
+	return from_components_no_normalize(abs(ssign), layer, mag)
 
 #Max
 func _max(value: Decimal):
@@ -608,53 +608,53 @@ func minabs(value: Decimal):
 		return self
 
 #Clamp
-func _clamp(min: Decimal, max: Decimal):
-	return _max(min)._min(max)
+func _clamp(minD: Decimal, maxD: Decimal):
+	return _max(minD)._min(maxD)
 
 #Clamp Min
-func clamp_min(min: Decimal):
-	return _max(min)
+func clamp_min(minD: Decimal):
+	return _max(minD)
 
 #Clamp Max
-func clamp_max(max: Decimal):
-	return _min(max)
+func clamp_max(maxD: Decimal):
+	return _min(maxD)
 
 #Round
 func _round():
 	if (mag < 0):
 		return from_number(0)
 	if (layer == 0):
-		return from_components(sign, 0, round(mag))
+		return from_components(ssign, 0, round(mag))
 	return self
 
 #Floor
 func _floor():
 	if (mag < 0):
-		if (sign == -1):
+		if (ssign == -1):
 			return from_number(-1)
 		else:
 			return from_number(0)
-	if (sign == -1):
+	if (ssign == -1):
 		var a = self.neg()
 		var b = a._ceil()
 		return b.neg()
 	if (layer == 0):
-		return from_components(sign, 0, floor(mag));
+		return from_components(ssign, 0, floor(mag));
 	return self
 
 #Ceiling
 func _ceil():
 	if (mag < 0):
-		if (sign == 1):
+		if (ssign == 1):
 			return from_number(1) # The ceiling function called on something tiny like 10^10^-100 should return 1, since 10^10^-100 is still greater than 0
 		else:
 			return from_number(0)
-	if (sign == -1):
+	if (ssign == -1):
 		var a = self.neg()
 		var b = a._floor()
 		return b.neg()
 	if (layer == 0):
-		return from_components(sign, 0, ceil(mag))
+		return from_components(ssign, 0, ceil(mag))
 	return self
 
 #Truncate
@@ -662,7 +662,7 @@ func trunc():
 	if (mag < 0):
 		return from_number(0);
 	if (layer == 0):
-		return from_components(sign, 0, snappedi(mag, 1))
+		return from_components(ssign, 0, snappedi(mag, 1))
 	return self
 
 #Square
@@ -672,11 +672,11 @@ func sqr():
 #Square Root
 func _sqrt():
 	if layer == 0:
-		return from_number(sqrt(sign * mag))
+		return from_number(sqrt(ssign * mag))
 	elif layer == 1:
 		return from_components(1, 2, num_log10(mag) - 0.3010299956639812)
 	else:
-		var result = from_components_no_normalize(sign, layer - 1, mag).divide(from_components_no_normalize(1, 0, 2))
+		var result = from_components_no_normalize(ssign, layer - 1, mag).divide(from_components_no_normalize(1, 0, 2))
 		result.layer += 1
 		result.normalize()
 		return result
@@ -699,7 +699,7 @@ func p_log10():
 
 #Abs Log10
 func abs_log10():
-	if sign == 0:
+	if ssign == 0:
 		return from_components(0, 0, NAN)
 	elif layer > 0:
 		return from_components(sign(mag), layer - 1, abs(mag))
@@ -708,31 +708,31 @@ func abs_log10():
 
 #Log10
 func log10():
-	if sign <= 0:
+	if ssign <= 0:
 		return from_components(0, 0, NAN)
 	elif layer > 0:
 		return from_components(sign(mag), layer - 1, abs(mag))
 	else:
-		return from_components(sign, 0, num_log10(mag))
+		return from_components(ssign, 0, num_log10(mag))
 
 #Log
 func _log(base: Decimal):
-	if sign <= 0:
+	if ssign <= 0:
 		return from_components(0, 0, NAN)
-	if base.sign <= 0:
+	if base.ssign <= 0:
 		return from_components(0, 0, NAN)
-	if base.sign == 1 and base.layer == 0 and base.mag == 1:
+	if base.ssign == 1 and base.layer == 0 and base.mag == 1:
 		return from_components(0, 0, NAN)
 	elif layer == 0 and base.layer == 0:
-		return from_components(sign, 0, log(mag) / log(base.mag));
+		return from_components(ssign, 0, log(mag) / log(base.mag));
 	return log10().divide(base._log10())
 
 #Log2
 func log2():
-	if sign <= 0:
+	if ssign <= 0:
 		return from_components(0, 0, NAN)
 	elif layer == 0:
-		return from_components(sign, 0, num_log2(mag))
+		return from_components(ssign, 0, num_log2(mag))
 	elif layer == 1:
 		return from_components(sign(mag), 0, abs(mag) * 3.321928094887362) # log2(10)
 	elif layer == 2:
@@ -742,10 +742,10 @@ func log2():
 
 #Natural Log
 func ln():
-	if sign <= 0:
+	if ssign <= 0:
 		return from_components(0, 0, NAN)
 	elif layer == 0:
-		return from_components(sign, 0, log(mag))
+		return from_components(ssign, 0, log(mag))
 	elif layer == 1:
 		return from_components(sign(mag), 0, abs(mag) * 2.302585092994046) # ln(10)
 	elif layer == 2:
@@ -759,27 +759,27 @@ func _pow(value: Decimal):
 	var b = value
 
 	#special case: if a is 0, then return 0 (UNLESS b is 0, then return 1)
-	if a.sign == 0:
+	if a.ssign == 0:
 		if b.eq(from_number(0)):
 			return from_components_no_normalize(1, 0, 1)
 		else:
 			return a
 
 	#special case: if a is 1, then return 1
-	if a.sign == 1 and a.layer == 0 and a.mag == 1:
+	if a.ssign == 1 and a.layer == 0 and a.mag == 1:
 		return a
 
 	#special case: if b is 0, then return 1
-	if b.sign == 0:
+	if b.ssign == 0:
 		return from_components_no_normalize(1, 0, 1)
 
 	#special case: if b is 1, then return a
-	if b.sign == 1 and b.layer == 0 and b.mag == 1:
+	if b.ssign == 1 and b.layer == 0 and b.mag == 1:
 		return a
 
 	var result = a.abs_log10().multiply(b).pow10()
 
-	if sign == -1:
+	if ssign == -1:
 		if abs(b.to_number() % 2) % 2 == 1:
 			return result.neg()
 		elif abs(b.to_number() % 2) % 2 == 0:
@@ -791,30 +791,30 @@ func _pow(value: Decimal):
 #10 to the Power of N
 func pow10():
 	#There are four cases we need to consider:
-	#1) positive sign, positive mag (e15, ee15): +1 layer (e.g. 10^15 becomes e15, 10^e15 becomes ee15)
-	#2) negative sign, positive mag (-e15, -ee15): +1 layer but sign and mag sign are flipped (e.g. 10^-15 becomes e-15, 10^-e15 becomes ee-15)
-	#3) positive sign, negative mag (e-15, ee-15): layer 0 case would have been handled in the Math.pow check, so just return 1
-	#4) negative sign, negative mag (-e-15, -ee-15): layer 0 case would have been handled in the Math.pow check, so just return 1
+	#1) positive ssign, positive mag (e15, ee15): +1 layer (e.g. 10^15 becomes e15, 10^e15 becomes ee15)
+	#2) negative ssign, positive mag (-e15, -ee15): +1 layer but ssign and mag ssign are flipped (e.g. 10^-15 becomes e-15, 10^-e15 becomes ee-15)
+	#3) positive ssign, negative mag (e-15, ee-15): layer 0 case would have been handled in the Math.pow check, so just return 1
+	#4) negative ssign, negative mag (-e-15, -ee-15): layer 0 case would have been handled in the Math.pow check, so just return 1
 	if (not is_finite(layer)) or (not is_finite(mag)):
 		return from_components(0, 0, NAN)
 
 	var a = self
 	#handle layer 0 case - if no precision is lost just use Math.pow, else promote one layer
 	if a.layer == 0:
-		var newmag = pow(10, a.sign * a.mag)
+		var newmag = pow(10, a.ssign * a.mag)
 		if is_finite(newmag) and abs(newmag) >= 0.1:
 			return from_components(1, 0, newmag)
 		else:
-			if a.sign == 0:
+			if a.ssign == 0:
 				return from_components(1, 0, 1)
 			else:
-				a = from_components_no_normalize(a.sign, a.layer + 1, num_log10(a.mag))
+				a = from_components_no_normalize(a.ssign, a.layer + 1, num_log10(a.mag))
 
 	#handle all 4 layer 1+ cases individually
-	if a.sign > 0 and a.mag >= 0:
-		return from_components(a.sign, a.layer + 1, a.mag)
-	if a.sign < 0 and a.mag >= 0:
-		return from_components(-a.sign, a.layer + 1, -a.mag)
+	if a.ssign > 0 and a.mag >= 0:
+		return from_components(a.ssign, a.layer + 1, a.mag)
+	if a.ssign < 0 and a.mag >= 0:
+		return from_components(-a.ssign, a.layer + 1, -a.mag)
 
 	#both the negative mag cases are identical: one +/- rounding error
 	return from_components(1, 0, 1)
@@ -844,7 +844,7 @@ func gamma():
 		return recip()
 	elif layer == 0:
 		if lt(from_components_no_normalize(1, 0, 24)):
-			return from_number(f_gamma(sign * mag))
+			return from_number(f_gamma(ssign * mag))
 
 		var t = mag - 1
 		var l = 0.9189385332046727 # 0.5*Math.log(2*Math.PI)
@@ -867,12 +867,12 @@ func gamma():
 		l = l2
 		np = np * n2
 		lm = 1260 * np
-		var lt = 1 / lm
-		l = l + lt
+		var lt_v = 1 / lm
+		l = l + lt_v
 		np = np * n2
 		lm = 1680 * np
-		lt = 1 / lm
-		l = l - lt
+		lt_v = 1 / lm
+		l = l - lt_v
 		return l._exp()
 	elif layer == 1:
 		return (multiply(ln().subtract(from_number(1))))._exp()
@@ -888,13 +888,13 @@ func _exp():
 	if mag < 0:
 		return from_components(1, 0, 1)
 	if layer == 0 and mag <= 709.7:
-		return from_number(exp(sign * mag))
+		return from_number(exp(ssign * mag))
 	elif layer == 0:
-		return from_components(1, 1, sign * num_log10(E) * mag)
+		return from_components(1, 1, ssign * num_log10(E) * mag)
 	elif layer == 1:
-		return from_components(1, 2, sign * (num_log10(0.4342944819032518) + mag))
+		return from_components(1, 2, ssign * (num_log10(0.4342944819032518) + mag))
 	else:
-		return from_components(1, layer + 1, sign * mag)
+		return from_components(1, layer + 1, ssign * mag)
 
 #Layer Add 10
 func layer_add_10(diff: Decimal, linear: bool = false):
@@ -903,12 +903,12 @@ func layer_add_10(diff: Decimal, linear: bool = false):
 	if _diff >= 1:
 		#bug fix: if result is very smol (mag < 0, layer > 0) turn it into 0 first
 		if result.mag < 0 and result.layer > 0:
-			result.sign = 0
+			result.ssign = 0
 			result.mag = 0
 			result.layer = 0
-		elif result.sign == -1 and result.layer == 0:
-			#bug fix - for stuff like -3.layeradd10(1) we need to move the sign to the mag
-			result.sign = 1
+		elif result.ssign == -1 and result.layer == 0:
+			#bug fix - for stuff like -3.layeradd10(1) we need to move the ssign to the mag
+			result.ssign = 1
 			result.mag = - result.mag
 		var layeradd = snappedi(_diff, 1)
 		diff -= layeradd
@@ -923,8 +923,8 @@ func layer_add_10(diff: Decimal, linear: bool = false):
 				result.mag = num_log10(result.mag)
 				if not is_finite(result.mag):
 					#another bugfix: if we hit -Infinity mag, then we should return negative infinity, not 0. 0.layeradd10(-1) h its this
-					if result.sign == 0:
-						result.sign = 1
+					if result.ssign == 0:
+						result.ssign = 1
 					#also this, for 0.layeradd10(-2)
 					if result.layer < 0:
 						result.layer = 0
@@ -936,8 +936,8 @@ func layer_add_10(diff: Decimal, linear: bool = false):
 		result.layer += 1
 		result.mag = num_log10(result.mag)
 	#bugfix: before we normalize: if we started with 0, we now need to manually fix a layer ourselves!
-	if result.sign == 0:
-		result.sign = 1
+	if result.ssign == 0:
+		result.ssign = 1
 	if result.mag == 0 and result.layer >= 1:
 		result.layer -= 1
 		result.mag = 1
@@ -1055,7 +1055,7 @@ func tetrate(height: int = 2, payload: Decimal = from_components_no_normalize(1,
 			return payload.normalize()
 		#shortcut
 		if payload.layer - layer > 3:
-			return from_components_no_normalize(payload.sign, payload.layer + (height - i - 1), payload.mag)
+			return from_components_no_normalize(payload.ssign, payload.layer + (height - i - 1), payload.mag)
 		#give up after 10000 iterations if nothing is happening
 		if i > 10000:
 			return payload
@@ -1124,10 +1124,10 @@ func slog_internal(base: Decimal = from_number(10), linear: bool = false):
 	#special cases:
 	#slog base 0 or lower is NaN
 	if base.lte(from_components(0, 0, 0)):
-		return from_components(NAN, NAN, NAN)
+		return from_components(int(NAN), int(NAN), int(NAN))
 	#slog base 1 is NaN
 	if base.eq(from_components(1, 0, 1)):
-		return from_components(NAN, NAN, NAN)
+		return from_components(int(NAN), int(NAN), int(NAN))
 	#need to handle these small, wobbling bases specially
 	if base.lt(from_components(1, 0, 1)):
 		if eq(from_components(1, 0, 1)):
@@ -1137,7 +1137,7 @@ func slog_internal(base: Decimal = from_number(10), linear: bool = false):
 		#0 < this < 1: ambiguous (happens multiple times)
 		#this < 0: impossible (as far as I can tell)
 		#this > 1: partially complex (http://myweb.astate.edu/wpaulsen/tetcalc/tetcalc.html base 0.25 for proof)
-		return from_components(NAN, NAN, NAN)
+		return from_components(int(NAN), int(NAN), int(NAN))
 	#slog_n(0) is -1
 	if mag < 0 or eq(from_components(0, 0, 0)):
 		return from_components(-1, 0, 1)
@@ -1168,14 +1168,14 @@ func lambert_w():
 	elif mag < 0:
 		return from_number(f_lambertw(to_number()))
 	elif layer == 0:
-		return from_number(f_lambertw(sign * mag))
+		return from_number(f_lambertw(ssign * mag))
 	elif layer == 1:
 		return d_lambertw(self)
 	elif layer == 2:
 		return d_lambertw(self)
 
 	if layer >= 3:
-		return from_components_no_normalize(sign, layer - 1, mag)
+		return from_components_no_normalize(ssign, layer - 1, mag)
 
 	print("Unhandled behavior in lambert_w()")
 
@@ -1188,10 +1188,10 @@ func linear_sroot(degree: int):
 	#1st-degree super root just returns its input
 	if degree == 1:
 		return self
-	if eq(from_components(INF, INF, INF)):
-		return from_components(INF, INF, INF)
+	if eq(from_components(int(INF), int(INF), int(INF))):
+		return from_components(int(INF), int(INF), int(INF))
 	if not _is_finite():
-		return from_components(NAN, NAN, NAN)
+		return from_components(int(NAN), int(NAN), int(NAN))
 	#Using linear approximation, x^^n = x^n if 0 < n < 1
 	if degree > 0 and degree < 1:
 		return root(from_number(degree))
@@ -1200,26 +1200,26 @@ func linear_sroot(degree: int):
 		return from_number(degree).add(from_number(2))._pow(recip())
 	#Super roots with -1 <= degree < 0 have either no solution or infinitely many solutions, and tetration with height <= -2 returns NaN, so super roots of degree <= -2 don't work
 	if degree <= 0:
-		return from_components(NAN, NAN, NAN)
+		return from_components(int(NAN), int(NAN), int(NAN))
 	#Infinite degree super-root is x^(1/x) between 1/e <= x <= e, undefined otherwise
 	if degree == INF:
 		var this_num = to_number();
 		if this_num < E and this_num > _EXPN1:
 			return _pow(recip())
 		else:
-			return from_components(NAN, NAN, NAN)
+			return from_components(int(NAN), int(NAN), int(NAN))
 	#Special case: any super-root of 1 is 1
 	if eq(from_number(1)):
 		return from_components(1, 0, 1)
 	#TODO: base < 0 (It'll probably be NaN anyway)
 	if lt(from_number(0)):
-		return from_components(NAN, NAN, NAN)
+		return from_components(int(NAN), int(NAN), int(NAN))
 	#Treat all numbers of layer <= -2 as zero, because they effectively are
 	if lte(from_components(1, -2, -16)): # 1ee-16
 		if degree % 2 == 1:
 			return self
 		else:
-			return from_components(NAN, NAN, NAN)
+			return from_components(int(NAN), int(NAN), int(NAN))
 	#this > 1
 	if gt(from_number(1)):
 		#Uses guess-and-check to find the super-root.
@@ -1277,7 +1277,7 @@ func linear_sroot(degree: int):
 		var prevPoint = _upperBound
 		var nextPoint = _upperBound
 		var evenDegree = ceil(degree) % 2 == 0
-		var range = 0
+		var rangeD = 0
 		var lastValid = from_components(1, 10, 1)
 		var infLoopDetector = false
 		var previousUpper = from_components(0, 0, 0)
@@ -1301,7 +1301,7 @@ func linear_sroot(degree: int):
 					prevPoint = _upper.pow10().recip()
 					nextPoint = _upper.pow10().recip()
 					distance = from_components(0, 0, 0)
-					range = -1 # This would cause problems with degree < 1 in the linear approximation... but those are already covered as a special case
+					rangeD = -1 # This would cause problems with degree < 1 in the linear approximation... but those are already covered as a special case
 					if stage == 3:
 						lastValid = _upper
 				elif _upper.pow10().recip().tetrate(degree, from_number(1), true).eq(_upper.pow10().recip()) and (not evenDegree) and _upper.pow10().recip().lt(from_number(0.4)):
@@ -1309,7 +1309,7 @@ func linear_sroot(degree: int):
 					prevPoint = _upper.pow10().recip();
 					nextPoint = _upper.pow10().recip()
 					distance = from_components(0, 0, 0)
-					range = 0
+					rangeD = 0
 				elif _upper.pow10().recip().tetrate(degree, from_number(1), true).eq(_upper.pow10().recip().multiply(from_number(2)).tetrate(degree, from_number(1), true)):
 					#If the upper bound is closer to zero than the next point with a discernable tetration, so surely it's in whichever range is closest to zero?
 					#This won't happen in a strictly increasing tetration, as there x^^degree ~= x as x approaches zero
@@ -1318,9 +1318,9 @@ func linear_sroot(degree: int):
 					nextPoint = _upperBound.multiply(from_number(2))
 					distance = _upperBound
 					if evenDegree:
-						range = -1
+						rangeD = -1
 					else:
-						range = 0
+						rangeD = 0
 				else:
 					#We want to use prevspan to find the "previous point" right before the upper bound and the "next point" right after the upper bound, as that will let us approximate derivatives
 					prevspan = _upper.multiply(from_number(1.2e-16))
@@ -1339,13 +1339,13 @@ func linear_sroot(degree: int):
 						lastValid = _upper
 					if nextPoint.tetrate(degree, from_number(1), true).lt(_upperBound.tetrate(degree, from_number(1), true)):
 						#Derivative is negative, so we're in decreasing range
-						range = -1
+						rangeD = -1
 					elif evenDegree:
 						#No zero range, so we're in increasing range
-						range = 1
+						rangeD = 1
 					elif stage == 3 and _upper.gt_tolerance(minimum, 1e-8):
 						#We're already below the minimum, so we can't be in range 1
-						range = 0
+						rangeD = 0
 					else:
 						#Number imprecision has left the second derivative somewhat untrustworthy, so we need to expand the bounds to ensure it's correct
 						while prevPoint.tetrate(degree, from_number(1), true).eq_tolerance(_upperBound.tetrate(degree, from_number(1), true), 1e-8) or nextPoint.tetrate(degree, from_number(1), true).eq_tolerance(_upperBound.tetrate(degree, from_number(1), true), 1e-8) or prevPoint.gte(_upperBound) or nextPoint.lte(_upperBound):
@@ -1355,19 +1355,19 @@ func linear_sroot(degree: int):
 							nextPoint = _upperBound.add(distance)
 						if nextPoint.tetrate(degree, from_number(1), true).subtract(_upperBound.tetrate(degree, from_number(1), true)).lt(_upperBound.tetrate(degree, from_number(1), true).sub(prevPoint.tetrate(degree, from_number(1), true))):
 							#Second derivative is negative, so we're in zero range
-							range = 0
+							rangeD = 0
 						else:
 							#By process of elimination, we're in increasing range
-							range = 1
-				if range == -1:
+							rangeD = 1
+				if rangeD == -1:
 					decreasingFound = true
-				if stage == 1 and range == 1 or stage == 3 and (not range == 0):
+				if stage == 1 and rangeD == 1 or stage == 3 and (not rangeD == 0):
 					#The upper bound is too high
 					if _lower.eq(from_components(1, 10, 1)):
 						_upper = _upper.multiply(from_number(2))
 					else:
 						var cutOff = false;
-						if infLoopDetector and (range == 1 and stage == 1 or range == -1 and stage == 3):
+						if infLoopDetector and (rangeD == 1 and stage == 1 or rangeD == -1 and stage == 3):
 							cutOff = true # Avoids infinite loops from floating point imprecision
 						_upper = _upper.add(_lower).divide(from_number(2))
 						if cutOff:
@@ -1380,7 +1380,7 @@ func linear_sroot(degree: int):
 					else:
 						#The upper bound is too low, meaning last time we decreased the upper bound, we should have gone to the other half of the new range instead
 						var _cutOff = false;
-						if infLoopDetector and (range == 1 and stage == 1 or range == -1 and stage == 3):
+						if infLoopDetector and (rangeD == 1 and stage == 1 or rangeD == -1 and stage == 3):
 							_cutOff = true # Avoids infinite loops from floating point imprecision
 						_lower = _lower.subtract(difference)
 						_upper = _upper.subtract(difference)
@@ -1427,7 +1427,7 @@ func linear_sroot(degree: int):
 				else:
 					_previous = _guess
 				if _upper.gt(from_number(1e18)):
-					return from_components(NAN, NAN, NAN)
+					return from_components(int(NAN), int(NAN), int(NAN))
 			#using guess.neq(minimum) led to imprecision errors, so here's a fixed version of that
 			if not _guess.eq_tolerance(minimum, 1e-15):
 				return _guess.pow10().recip()
@@ -1436,7 +1436,7 @@ func linear_sroot(degree: int):
 				#Check if the root is in the zero range.
 				if maximum.eq(from_components(1, 10, 1)):
 					#There is no zero range, so the super root doesn't exist
-					return from_components(NAN, NAN, NAN)
+					return from_components(int(NAN), int(NAN), int(NAN))
 				_lower = from_components(1, 10, 1)
 				_upper = maximum
 				_previous = _upper
@@ -1455,7 +1455,7 @@ func linear_sroot(degree: int):
 					else:
 						_previous = _guess
 					if _upper.gt(from_number(1e18)):
-						return from_components(NAN, NAN, NAN)
+						return from_components(int(NAN), int(NAN), int(NAN))
 				return _guess.pow10().recip()
 
 #Pentate
@@ -1490,7 +1490,7 @@ func _sin():
 	if mag < 0:
 		return self
 	if layer == 0:
-		return from_number(sin(sign * mag))
+		return from_number(sin(ssign * mag))
 	return from_components_no_normalize(0, 0, 0)
 
 #Cosine
@@ -1498,7 +1498,7 @@ func _cos():
 	if mag < 0:
 		return from_components(1, 0, 1)
 	if layer == 0:
-		return from_number(cos(sign * mag));
+		return from_number(cos(ssign * mag));
 	return from_components_no_normalize(0, 0, 0)
 
 #Tangent
@@ -1506,7 +1506,7 @@ func _tan():
 	if mag < 0:
 		return self
 	if layer == 0:
-		return from_number(tan(sign * mag))
+		return from_number(tan(ssign * mag))
 	return from_components_no_normalize(0, 0, 0)
 
 #Arcsine
@@ -1514,24 +1514,23 @@ func _asin():
 	if mag < 0:
 		return self
 	if layer == 0:
-		return from_number(asin(sign * mag))
-	return from_components_no_normalize(NAN, NAN, NAN)
+		return from_number(asin(ssign * mag))
+	return from_components_no_normalize(int(NAN), int(NAN), int(NAN))
 
 #Arccosine
 func _acos():
 	if mag < 0:
 		return from_number(acos(to_number()))
 	if layer == 0:
-		return from_number(acos(sign * mag));
-	return from_components_no_normalize(NAN, NAN, NAN)
-
+		return from_number(acos(ssign * mag));
+	return from_components_no_normalize(int(NAN), int(NAN), int(NAN))
 #Arctangent
 func _atan():
 	if mag < 0:
 		return self
 	if layer == 0:
-		return from_number(atan(sign * mag))
-	return from_number(atan(sign * 1.8e308))
+		return from_number(atan(ssign * mag))
+	return from_number(atan(ssign * 1.8e308))
 
 #Hyperbolic Sine
 func _sinh():
@@ -1556,18 +1555,18 @@ func acosh():
 #Hyperbolic Arctangent
 func atanh():
 	if _abs().gte(from_number(1)):
-		return from_components_no_normalize(NAN, NAN, NAN)
+		return from_components_no_normalize(int(NAN), int(NAN), int(NAN))
 	return (add(from_number(1)).divide(from_number(1).subtract(self))).divide(from_number(2)).ln()
 
 ### COMPARATORS ###
 
 #Compare
 func cmp(value: Decimal):
-	if (sign > value.sign):
+	if (ssign > value.ssign):
 		return 1
-	if (sign < value.sign):
+	if (ssign < value.ssign):
 		return -1
-	return sign * cmpabs(value)
+	return ssign * cmpabs(value)
 
 #Compare Abs
 func cmpabs(value: Decimal):
@@ -1596,15 +1595,15 @@ func cmpabs(value: Decimal):
 
 #Is NaN
 func _is_nan():
-	return is_nan(sign) or is_nan(layer) or is_nan(mag)
+	return is_nan(ssign) or is_nan(layer) or is_nan(mag)
 
 #Is Finite
 func _is_finite():
-	return is_finite(sign) and is_finite(layer) and is_finite(mag)
+	return is_finite(ssign) and is_finite(layer) and is_finite(mag)
 
 #Equals
 func eq(value: Decimal):
-	return sign == value.sign and layer == value.layer and mag == value.mag
+	return ssign == value.ssign and layer == value.layer and mag == value.mag
 
 #Not Equal
 func neq(value: Decimal):
@@ -1640,7 +1639,7 @@ func eq_tolerance(value: Decimal, tolerance: float):
 	if tolerance == null:
 		tolerance = 1e-7
 	#Numbers that are too far away are never close.
-	if not sign == value.sign:
+	if not ssign == value.ssign:
 		return false
 	if abs(layer - value.layer) > 1:
 		return false
